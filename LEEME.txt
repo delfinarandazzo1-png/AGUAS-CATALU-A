@@ -1,0 +1,7 @@
+AGUAS CATALUÑA — versión PWA
+
+Esta carpeta contiene la app preparada para instalarse como aplicación en Android/iPhone.
+
+IMPORTANTE: para instalar una PWA, los archivos deben estar publicados en una dirección HTTPS (por ejemplo, GitHub Pages). Abrir index.html como archivo local no permite la instalación PWA.
+
+La app conserva la conexión con Supabase y no guarda la contraseña.

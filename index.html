@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AGUAS CATALUÑA · App</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2c8fc4">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="AGUAS CATALUÑA">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--blue:#2c8fc4;--blue2:#eaf7fc;--ink:#17324a;--muted:#718392;--bg:#f4f8fa;--card:#fff;--line:#e2ebef;--red:#c94d48;--green:#399867;--orange:#b97918;--shadow:0 8px 26px rgba(23,50,74,.08)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+.app{display:flex;min-height:100vh}.side{width:240px;background:#fff;border-right:1px solid var(--line);padding:20px 14px;position:sticky;top:0;height:100vh}.brand{font-weight:900;font-size:20px;padding:10px 12px 20px}.brand span{display:block;color:var(--blue);font-size:12px;margin-top:3px}.nav button{width:100%;text-align:left;margin:3px 0;background:transparent;color:var(--ink);padding:11px 12px}.nav button.active{background:var(--blue2);color:var(--blue)}.sidefoot{position:absolute;bottom:18px;left:14px;right:14px}.main{flex:1;min-width:0}.top{background:#fff;border-bottom:1px solid var(--line);padding:15px 24px;display:flex;justify-content:space-between;align-items:center}.top b{font-size:14px}.content{max-width:1200px;margin:auto;padding:22px}.hero{background:linear-gradient(135deg,#2c8fc4,#69c0d9);color:#fff;border-radius:24px;padding:25px;margin-bottom:17px;box-shadow:var(--shadow)}.hero h1{margin:0;font-size:27px}.hero p{margin:5px 0 0;opacity:.92}
+.card{background:var(--card);border-radius:20px;padding:18px;box-shadow:var(--shadow);margin-bottom:16px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.kpi{padding:16px;border-radius:17px;background:#fff;box-shadow:var(--shadow)}.kpi .n{font-size:25px;font-weight:900;margin-top:5px}.muted{font-size:13px;color:var(--muted)}.red{color:var(--red)}.green{color:var(--green)}.orange{color:var(--orange)}
+button{border:0;border-radius:12px;padding:11px 15px;background:var(--blue);color:#fff;font-weight:750;cursor:pointer}button.secondary{background:#edf5f8;color:var(--ink)}button.danger{background:#fdeceb;color:var(--red)}button.small{font-size:12px;padding:8px 10px}
+input,select,textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:11px;font:inherit;background:#fff;color:var(--ink)}textarea{min-height:70px}.field label{display:block;font-size:12px;font-weight:750;margin:3px 0 6px}.formgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:11px}.full{grid-column:1/-1}
+.toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.toolbar .grow{flex:1;min-width:220px}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid #edf1f3;font-size:13px}th{font-size:11px;color:var(--muted);text-transform:uppercase}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:var(--blue2);color:var(--blue);font-size:11px;font-weight:750}.badge.red{background:#fdeceb}.badge.green{background:#eaf7ef}.badge.orange{background:#fff4df}.empty{text-align:center;padding:28px;color:var(--muted)}
+.page{display:none}.page.active{display:block}.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.status{padding:11px 13px;border-radius:12px;background:var(--blue2);font-size:13px;margin-top:12px}.status.ok{background:#eaf7ef;color:#286b46}.status.err{background:#fdeceb;color:#a9322e}
+.modalbg{position:fixed;inset:0;background:#102c3b66;display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}.modal{background:#fff;border-radius:22px;max-width:760px;width:100%;max-height:92vh;overflow:auto;padding:22px}.hidden{display:none!important}.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:17px}
+.login{max-width:480px;margin:8vh auto;padding:25px}.login .hero{margin-bottom:14px}
+@media(max-width:850px){.side{width:72px;padding:12px 7px}.brand{font-size:0;text-align:center}.brand:before{content:"💧";font-size:24px}.brand span,.nav button span,.sidefoot .muted{display:none}.nav button{text-align:center;font-size:0}.nav button:first-letter{font-size:18px}.content{padding:13px}.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.grid,.formgrid{grid-template-columns:1fr}.full{grid-column:auto}.top{padding:12px}.top .muted{display:none}}
+</style>
+</head>
+<body>
+<div id="loginScreen" class="login">
+  <div class="hero"><h1>💧 AGUAS CATALUÑA</h1><p>Gestión de clientes, reparto, cobros y bidones</p></div>
+  <div class="card">
+    <h2>🔐 Ingresar</h2><div class="muted">Primero configurá la conexión con tu proyecto Supabase.</div>
+    <div class="field" style="margin-top:13px"><label>Project URL</label><input id="supUrl" placeholder="https://...supabase.co"></div>
+    <div class="field"><label>Publishable Key</label><input id="supKey" type="password" placeholder="sb_publishable_..."></div>
+    <div class="field"><label>Email</label><input id="loginEmail" type="email"></div>
+    <div class="field"><label>Contraseña</label><input id="loginPass" type="password"></div>
+    <button id="loginButton" onclick="signIn()" style="width:100%;margin-top:13px">Ingresar a la app</button>
+    <div id="loginStatus" class="status hidden"></div>
+  </div>
+</div>
+
+<div id="app" class="app hidden">
+<aside class="side">
+ <div class="brand">💧 AGUAS CATALUÑA<span>Gestión del reparto</span></div>
+ <nav class="nav">
+  <button data-page="home" onclick="go('home')">🏠 <span>Inicio</span></button>
+  <button data-page="clientes" onclick="go('clientes')">👥 <span>Clientes</span></button>
+  <button data-page="pedidos" onclick="go('pedidos')">📦 <span>Pedidos</span></button>
+  <button data-page="reparto" onclick="go('reparto')">🚚 <span>Reparto</span></button>
+  <button data-page="cuentas" onclick="go('cuentas')">💰 <span>Cuenta corriente</span></button>
+  <button data-page="bidones" onclick="go('bidones')">🧴 <span>Bidones</span></button>
+  <button data-page="precios" onclick="go('precios')">💲 <span>Precios</span></button>
+  <button data-page="gastos" onclick="go('gastos')">💸 <span>Gastos</span></button>
+  <button data-page="analisis" onclick="go('analisis')">📊 <span>Análisis mensual</span></button>
+ </nav>
+ <div class="sidefoot"><button class="danger" onclick="logout()">↪ <span>Cerrar sesión</span></button></div>
+</aside>
+<main class="main">
+ <header class="top"><b id="pageTitle">Inicio</b><span class="muted" id="sessionUser"></span></header>
+ <div class="content">
+
+ <section id="page-home" class="page">
+  <div class="hero"><h1>Hola 👋</h1><p>Todo lo importante de Aguas Cataluña, en un solo lugar.</p></div>
+  <div class="grid">
+   <div class="kpi"><div class="muted">Clientes activos</div><div class="n" id="kClients">—</div></div>
+   <div class="kpi"><div class="muted">Pedidos pendientes</div><div class="n" id="kPending">—</div></div>
+   <div class="kpi"><div class="muted">Ventas del día</div><div class="n" id="kSales">$0</div></div>
+   <div class="kpi"><div class="muted">🔴 Deuda total</div><div class="n red" id="kDebt">$0</div></div>
+  </div>
+  <div class="card"><div class="row"><div><h2 style="margin:0 0 4px">🚚 Reparto de hoy</h2><div class="muted">Pedidos pendientes para la fecha de hoy.</div></div><button onclick="go('reparto')">Ver reparto</button></div><div id="homeStops" style="margin-top:14px"></div></div>
+ </section>
+
+ <section id="page-clientes" class="page">
+  <div class="toolbar"><div class="grow"><input id="clientSearch" placeholder="🔎 Buscar cliente, teléfono o dirección" oninput="renderClients()"></div><select id="clientType" onchange="renderClients()" style="max-width:180px"><option value="">Todos</option><option>A demanda</option><option>Dispenser</option></select><button onclick="openClient()">＋ Nuevo cliente</button></div>
+  <div class="card"><div class="row"><h2 style="margin:0">👥 Clientes</h2><span class="muted" id="clientCount"></span></div><div style="overflow:auto;margin-top:12px"><table><thead><tr><th>Cliente</th><th>Teléfono</th><th>Dirección</th><th>Tipo</th><th>Bidones</th><th>Deuda</th><th></th></tr></thead><tbody id="clientBody"></tbody></table></div></div>
+ </section>
+
+ <section id="page-pedidos" class="page">
+  <div class="toolbar"><button onclick="openOrder()">＋ Nuevo pedido</button><button class="secondary" onclick="loadAll()">↻ Actualizar</button></div>
+  <div class="card"><div class="row"><div><h2 style="margin:0">📦 Pedidos</h2><div class="muted">Los pedidos se convierten en entregas desde acá.</div></div></div><div style="overflow:auto;margin-top:12px"><table><thead><tr><th>Cliente</th><th>Fecha</th><th>Pedido</th><th>Total</th><th>Estado</th><th></th></tr></thead><tbody id="orderBody"></tbody></table></div></div>
+ </section>
+
+ <section id="page-reparto" class="page">
+  <div class="hero"><h1>🚚 Reparto de hoy</h1><p id="todayText"></p></div>
+  <div class="grid">
+   <div class="kpi"><div class="muted">Paradas</div><div class="n" id="rStops">0</div></div><div class="kpi"><div class="muted">Bidones 20 L</div><div class="n" id="r20">0</div></div><div class="kpi"><div class="muted">Bidones 12 L</div><div class="n" id="r12">0</div></div><div class="kpi"><div class="muted">A cobrar pedidos</div><div class="n" id="rSales">$0</div></div>
+  </div>
+  <div class="card"><div class="row"><h2 style="margin:0">📍 Paradas</h2><button class="secondary" onclick="loadToday()">↻ Actualizar</button></div><div id="routeList" style="margin-top:13px"></div></div>
+ </section>
+
+ <section id="page-cuentas" class="page">
+  <div class="card"><div class="row"><div><h2 style="margin:0">💰 Cuenta corriente</h2><div class="muted">Saldo actual por cliente.</div></div><button class="secondary" onclick="loadAccounts()">↻ Actualizar</button></div><div style="overflow:auto;margin-top:12px"><table><thead><tr><th>Cliente</th><th>Deuda actual</th><th></th></tr></thead><tbody id="accountBody"></tbody></table></div></div>
+ </section>
+
+ <section id="page-bidones" class="page">
+  <div class="grid"><div class="kpi"><div class="muted">Con clientes</div><div class="n" id="bOut">0</div></div><div class="kpi"><div class="muted">Entregados hoy</div><div class="n" id="bToday">0</div></div></div>
+  <div class="card"><div class="row"><h2 style="margin:0">🧴 Bidones por cliente</h2><button class="secondary" onclick="loadBottles()">↻ Actualizar</button></div><div style="overflow:auto;margin-top:12px"><table><thead><tr><th>Cliente</th><th>20 L</th><th>12 L</th><th>Total</th><th>Alerta</th></tr></thead><tbody id="bottleBody"></tbody></table></div></div>
+ </section>
+
+ <section id="page-precios" class="page">
+  <div class="card"><h2 style="margin:0 0 5px">💲 Precios</h2><div class="muted">Los pedidos nuevos toman estos precios. Los históricos conservan su precio.</div><div class="formgrid" style="margin-top:15px"><div class="field"><label>Bidón 20 L</label><input id="price20Input" type="number" min="0" step=".01"></div><div class="field"><label>Bidón 12 L</label><input id="price12Input" type="number" min="0" step=".01"></div></div><button onclick="savePrices()" style="margin-top:15px">Guardar precios</button><div id="priceStatus" class="status hidden"></div></div>
+ </section>
+
+ <section id="page-gastos" class="page">
+  <div class="toolbar"><button onclick="openExpense()">＋ Nuevo gasto</button><button class="secondary" onclick="loadExpenses()">↻ Actualizar</button></div>
+  <div class="card"><div class="row"><h2 style="margin:0">💸 Gastos</h2><span class="muted" id="expenseTotal"></span></div><div style="overflow:auto;margin-top:12px"><table><thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Importe</th><th>Medio</th></tr></thead><tbody id="expenseBody"></tbody></table></div></div>
+ </section>
+
+
+ <section id="page-analisis" class="page">
+  <div class="hero">
+   <div class="row">
+    <div><h1>📊 Análisis mensual</h1><p>Una visión completa del negocio, calculada con los datos reales guardados en Supabase.</p></div>
+    <div style="min-width:180px"><label style="font-size:12px;color:#fff">Mes a analizar</label><input id="analysisMonth" type="month" onchange="loadAnalysis()" style="background:#ffffffee"></div>
+   </div>
+  </div>
+  <div class="grid">
+   <div class="kpi"><div class="muted">Facturación</div><div class="n" id="aSales">$0</div><div class="muted" id="aSalesSub">Pedidos entregados</div></div>
+   <div class="kpi"><div class="muted">Cobrado</div><div class="n green" id="aCollected">$0</div><div class="muted" id="aCollectedSub">Pagos registrados</div></div>
+   <div class="kpi"><div class="muted">Gastos</div><div class="n orange" id="aExpenses">$0</div><div class="muted">Gastos registrados</div></div>
+   <div class="kpi"><div class="muted">Resultado estimado</div><div class="n" id="aResult">$0</div><div class="muted">Facturación − gastos</div></div>
+  </div>
+  <div class="grid" style="margin-top:12px">
+   <div class="kpi"><div class="muted">Pedidos entregados</div><div class="n" id="aOrders">0</div></div>
+   <div class="kpi"><div class="muted">Bidones 20 L</div><div class="n" id="a20">0</div></div>
+   <div class="kpi"><div class="muted">Bidones 12 L</div><div class="n" id="a12">0</div></div>
+   <div class="kpi"><div class="muted">Clientes con compras</div><div class="n" id="aCustomers">0</div></div>
+  </div>
+
+  <div class="card">
+   <div class="row"><div><h2 style="margin:0">📈 Facturación por día</h2><div class="muted">Solo pedidos con estado Entregado.</div></div><button class="secondary" onclick="loadAnalysis()">↻ Actualizar</button></div>
+   <div id="salesChart" style="height:250px;margin-top:18px;display:flex;align-items:flex-end;gap:5px;border-bottom:1px solid var(--line);padding:0 4px 3px"></div>
+  </div>
+
+  <div class="grid">
+   <div class="card">
+    <h2 style="margin:0 0 5px">🧴 Productos</h2><div class="muted">Cantidad vendida durante el mes.</div>
+    <div style="margin-top:18px">
+      <div class="row"><b>20 L</b><span id="prod20Label">0</span></div>
+      <div style="height:13px;background:#edf3f6;border-radius:999px;margin:7px 0 15px"><div id="prod20Bar" style="height:100%;width:0%;background:var(--blue);border-radius:999px"></div></div>
+      <div class="row"><b>12 L</b><span id="prod12Label">0</span></div>
+      <div style="height:13px;background:#edf3f6;border-radius:999px;margin-top:7px"><div id="prod12Bar" style="height:100%;width:0%;background:#67bca1;border-radius:999px"></div></div>
+    </div>
+   </div>
+   <div class="card">
+    <h2 style="margin:0 0 5px">💳 Medios de pago</h2><div class="muted">Distribución según pagos registrados.</div>
+    <div id="paymentChart" style="margin-top:15px"></div>
+   </div>
+  </div>
+
+  <div class="card">
+   <div class="row"><div><h2 style="margin:0">🏆 Clientes destacados</h2><div class="muted">Ordenados por facturación del mes.</div></div></div>
+   <div style="overflow:auto;margin-top:12px"><table><thead><tr><th>Cliente</th><th>Pedidos</th><th>Bidones</th><th>Facturado</th><th>Cobrado</th></tr></thead><tbody id="topClientsBody"></tbody></table></div>
+  </div>
+
+  <div class="card">
+   <h2 style="margin:0 0 5px">🧾 Resumen del período</h2>
+   <div id="analysisNarrative" class="muted" style="line-height:1.7">Cargando análisis…</div>
+  </div>
+ </section>
+ </div>
+</main>
+</div>
+
+<div id="modalBg" class="modalbg hidden"><div class="modal" id="modal"></div></div>
+
+<script>
+let sb=null,me=null,clients=[],orders=[],prices={20:0,12:0},currentOrder=null;
+const $=id=>document.getElementById(id);
+const money=n=>new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n)||0);
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+function today(){const d=new Date();const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`;}
+function setStatus(id,t,c=''){const x=$(id);x.className='status '+c;x.textContent=t;x.classList.remove('hidden')}
+function go(page){
+ document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$('page-'+page).classList.add('active');
+ document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));
+ const names={home:'Inicio',clientes:'Clientes',pedidos:'Pedidos',reparto:'Reparto de hoy',cuentas:'Cuenta corriente',bidones:'Bidones',precios:'Precios',gastos:'Gastos',analisis:'Análisis mensual'};$('pageTitle').textContent=names[page];
+ if(page==='home')loadHome();if(page==='clientes')renderClients();if(page==='pedidos')loadOrders();if(page==='reparto')loadToday();if(page==='cuentas')loadAccounts();if(page==='bidones')loadBottles();if(page==='precios')loadPrices();if(page==='gastos')loadExpenses();if(page==='analisis')loadAnalysis();
+}
+async function signIn(){
+ const url=$('supUrl').value.trim().replace(/\/$/,'');
+ const key=$('supKey').value.trim();
+ const email=$('loginEmail').value.trim();
+ const pass=$('loginPass').value;
+ if(!url||!key||!email||!pass)return setStatus('loginStatus','Completá todos los campos.','err');
+ const btn=$('loginButton'); if(btn){btn.disabled=true;btn.textContent='Conectando…';}
+ try{
+   if(!window.supabase)throw new Error('No se pudo cargar la biblioteca de Supabase. Abrí nuevamente el archivo y probá otra vez.');
+   sb=window.supabase.createClient(url,key);
+   localStorage.setItem('aguaCatalunaSupabaseUrl',url);
+   localStorage.setItem('aguaCatalunaSupabaseKey',key);
+   const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+   if(error)throw error;
+   if(!data?.session)throw new Error('Supabase no devolvió una sesión.');
+   me=data.user;
+   $('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');
+   $('sessionUser').textContent='🟢 '+email;go('home');
+ }catch(e){
+   setStatus('loginStatus','❌ '+(e?.message||e),'err');
+ }finally{
+   if(btn){btn.disabled=false;btn.textContent='Ingresar a la app';}
+ }
+}
+async function boot(){
+ const u=localStorage.getItem('aguaCatalunaSupabaseUrl'),k=localStorage.getItem('aguaCatalunaSupabaseKey');
+ if(u&&k){$('supUrl').value=u;$('supKey').value=k;sb=window.supabase.createClient(u,k);const {data}=await sb.auth.getSession();if(data.session){me=data.session.user;$('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');$('sessionUser').textContent='🟢 '+me.email;go('home');}}
+}
+async function logout(){if(sb)await sb.auth.signOut();location.reload()}
+async function loadClients(){
+ const {data,error}=await sb.from('clientes').select('*').eq('activo',true).order('nombre');if(!error)clients=data||[];
+}
+async function loadPrices(){
+ const {data}=await sb.from('precios').select('producto,precio,fecha_vigencia').eq('activo',true).order('fecha_vigencia',{ascending:false});prices={20:0,12:0};
+ for(const p of data||[]){const n=Number(p.precio)||0;if(p.producto==='20L'&&!prices[20])prices[20]=n;if(p.producto==='12L'&&!prices[12])prices[12]=n}
+ $('price20Input').value=prices[20]||'';$('price12Input').value=prices[12]||'';
+}
+function clientName(c){return ((c?.nombre||'')+' '+(c?.apellido||'')).trim()||'Sin nombre'}
+async function renderClients(){
+ await loadClients();const q=($('clientSearch')?.value||'').toLowerCase(),t=$('clientType')?.value||'';
+ const list=clients.filter(c=>(!q||[c.nombre,c.apellido,c.telefono,c.direccion,c.localidad].join(' ').toLowerCase().includes(q))&&(!t||c.tipo_cliente===t));
+ $('clientCount').textContent=list.length+' clientes';$('clientBody').innerHTML=list.map(c=>`<tr><td><b>${esc(clientName(c))}</b></td><td>${esc(c.telefono||'—')}</td><td>${esc(c.direccion||'—')}</td><td><span class="badge">${esc(c.tipo_cliente||'—')}</span></td><td>${Number(c.botellones_iniciales||0)}</td><td>${money(c.deuda_inicial)}</td><td><button class="small secondary" onclick="openClient('${c.id}')">✏️</button></td></tr>`).join('')||'<tr><td colspan="7" class="empty">No hay clientes.</td></tr>';
+}
+function openClient(id){
+ const c=clients.find(x=>x.id===id)||{};showModal(`<h2>${id?'✏️ Editar cliente':'＋ Nuevo cliente'}</h2><div class="formgrid" style="margin-top:15px">
+ <div class="field"><label>Nombre *</label><input id="fNombre" value="${esc(c.nombre||'')}"></div><div class="field"><label>Apellido</label><input id="fApellido" value="${esc(c.apellido||'')}"></div>
+ <div class="field"><label>Teléfono</label><input id="fTel" value="${esc(c.telefono||'')}"></div><div class="field"><label>Email</label><input id="fEmail" value="${esc(c.email||'')}"></div>
+ <div class="field full"><label>Dirección</label><input id="fDir" value="${esc(c.direccion||'')}"></div><div class="field"><label>Localidad</label><input id="fLoc" value="${esc(c.localidad||'General Rodríguez')}"></div>
+ <div class="field"><label>Tipo</label><select id="fTipo"><option ${c.tipo_cliente==='A demanda'?'selected':''}>A demanda</option><option ${c.tipo_cliente==='Dispenser'?'selected':''}>Dispenser</option></select></div>
+ <div class="field"><label>Día habitual</label><input id="fDia" value="${esc(c.dia_habitual||'')}"></div><div class="field"><label>Bidones iniciales</label><input id="fBot" type="number" min="0" value="${c.botellones_iniciales??0}"></div>
+ <div class="field"><label>Deuda inicial</label><input id="fDebt" type="number" min="0" step=".01" value="${c.deuda_inicial??0}"></div><div class="field full"><label>Observaciones</label><textarea id="fObs">${esc(c.observaciones||'')}</textarea></div></div>
+ <div id="mStatus" class="status hidden"></div><div class="actions"><button class="secondary" onclick="closeModal()">Cancelar</button><button onclick="saveClient('${id||''}')">Guardar</button></div>`);
+}
+async function saveClient(id){
+ const nombre=$('fNombre').value.trim();if(!nombre){setStatus('mStatus','El nombre es obligatorio.','err');return}
+ const p={nombre,apellido:$('fApellido').value.trim()||null,telefono:$('fTel').value.trim()||null,email:$('fEmail').value.trim()||null,direccion:$('fDir').value.trim()||null,localidad:$('fLoc').value.trim()||'General Rodríguez',tipo_cliente:$('fTipo').value,dia_habitual:$('fDia').value.trim()||null,botellones_iniciales:Number($('fBot').value)||0,deuda_inicial:Number($('fDebt').value)||0,observaciones:$('fObs').value.trim()||null};
+ const r=id?await sb.from('clientes').update(p).eq('id',id):await sb.from('clientes').insert(p);if(r.error)return setStatus('mStatus','❌ '+r.error.message,'err');closeModal();await loadClients();renderClients();
+}
+function openOrder(){
+ showModal(`<h2>📦 Nuevo pedido</h2><div class="formgrid" style="margin-top:15px"><div class="field full"><label>Cliente *</label><select id="oClient"><option value="">Seleccionar…</option>${clients.map(c=>`<option value="${c.id}">${esc(clientName(c))}${c.direccion?' · '+esc(c.direccion):''}</option>`).join('')}</select></div><div class="field"><label>Fecha de entrega</label><input id="oDate" type="date" value="${today()}"></div><div class="field"><label>Observaciones</label><input id="oObs"></div><div class="field"><label>20 L · precio ${money(prices[20])}</label><input id="o20" type="number" min="0" value="0"></div><div class="field"><label>12 L · precio ${money(prices[12])}</label><input id="o12" type="number" min="0" value="0"></div></div><div class="status" style="margin-top:13px">Total: <b id="oTotal">${money(0)}</b></div><div id="mStatus" class="status hidden"></div><div class="actions"><button class="secondary" onclick="closeModal()">Cancelar</button><button onclick="saveOrder()">Crear pedido</button></div>`);
+ $('o20').oninput=$('o12').oninput=()=>{$('oTotal').textContent=money((Number($('o20').value)||0)*prices[20]+(Number($('o12').value)||0)*prices[12])}
+}
+async function saveOrder(){
+ const cid=$('oClient').value,q20=Number($('o20').value)||0,q12=Number($('o12').value)||0;if(!cid||q20+q12<=0)return setStatus('mStatus','Elegí cliente y al menos un bidón.','err');if((q20&&!prices[20])||(q12&&!prices[12]))return setStatus('mStatus','Configurá los precios primero.','err');
+ const p={cliente_id:cid,fecha_pedido:new Date().toISOString(),fecha_entrega:$('oDate').value||null,cantidad_20l:q20,cantidad_12l:q12,precio_unitario_20l:prices[20],precio_unitario_12l:prices[12],estado:'Pendiente',observaciones:$('oObs').value.trim()||null};
+ const {error}=await sb.from('pedidos').insert(p);if(error)return setStatus('mStatus','❌ '+error.message,'err');closeModal();loadOrders();
+}
+async function loadOrders(){
+ const {data,error}=await sb.from('pedidos').select('*,clientes(nombre,apellido,direccion)').order('fecha_pedido',{ascending:false});orders=data||[];if(error)return;
+ $('orderBody').innerHTML=orders.map(o=>{const total=(Number(o.cantidad_20l)||0)*(Number(o.precio_unitario_20l)||0)+(Number(o.cantidad_12l)||0)*(Number(o.precio_unitario_12l)||0);return `<tr><td><b>${esc(clientName(o.clientes))}</b><br><span class="muted">${esc(o.clientes?.direccion||'')}</span></td><td>${esc(o.fecha_entrega||'—')}</td><td>${o.cantidad_20l||0}×20L · ${o.cantidad_12l||0}×12L</td><td><b>${money(total)}</b></td><td><span class="badge ${o.estado==='Entregado'?'green':'orange'}">${esc(o.estado)}</span></td><td>${['Pendiente','En reparto'].includes(o.estado)?`<button class="small" onclick="openDelivery('${o.id}')">🚚 Entregar</button>`:''}</td></tr>`}).join('')||'<tr><td colspan="6" class="empty">No hay pedidos.</td></tr>';
+}
+async function openDelivery(id){
+ currentOrder=orders.find(x=>x.id===id);const o=currentOrder,total=(Number(o.cantidad_20l)||0)*(Number(o.precio_unitario_20l)||0)+(Number(o.cantidad_12l)||0)*(Number(o.precio_unitario_12l)||0);
+ let prior=0;const {data}=await sb.from('v_clientes_saldo').select('saldo_actual').eq('id',o.cliente_id).maybeSingle();prior=Number(data?.saldo_actual)||0;
+ showModal(`<h2>🚚 Registrar entrega</h2><p><b>${esc(clientName(o.clientes))}</b><br><span class="muted">${esc(o.clientes?.direccion||'Sin dirección')}</span></p><div class="status">Pedido: <b>${o.cantidad_20l||0}×20L · ${o.cantidad_12l||0}×12L</b><br>Total: <b>${money(total)}</b>${prior?`<br>🔴 Deuda anterior: <b>${money(prior)}</b>`:''}<br><span class="muted">Los vacíos de 20 L y 12 L se controlan por separado. Si elegís <b>🔴 Debe</b>, la entrega queda sin cobro y el importe pasa a la cuenta corriente.</span></div>
+ <div class="formgrid" style="margin-top:14px"><div class="field"><label>Vacíos 20 L recibidos</label><input id="d20" type="number" min="0" value="0"></div><div class="field"><label>Vacíos 12 L recibidos</label><input id="d12" type="number" min="0" value="0"></div><div class="field"><label>Importe cobrado ahora</label><input id="dPaid" type="number" min="0" step=".01" value="${total}"></div><div class="field"><label>Medio de pago</label><select id="dMethod" onchange="toggleDebe()"><option>Efectivo</option><option>Transferencia</option><option>Mercado Pago</option><option>Otro</option><option value="Debe">🔴 Debe</option></select></div><div class="field full"><label>Observaciones</label><textarea id="dObs"></textarea></div></div>
+ <div id="mStatus" class="status hidden"></div><div class="actions"><button class="secondary" onclick="closeModal()">Cancelar</button><button class="green" onclick="saveDelivery()">✓ Confirmar entrega</button></div>`);
+}
+
+function toggleDebe(){
+ const debe=$('dMethod').value==='Debe';
+ const paid=$('dPaid');
+ if(debe){paid.value=0;paid.disabled=true;paid.title='Con Debe no se registra cobro en esta entrega.';}
+ else{paid.disabled=false;paid.title='';}
+}
+
+async function saveDelivery(){
+ const o=currentOrder,total=(Number(o.cantidad_20l)||0)*(Number(o.precio_unitario_20l)||0)+(Number(o.cantidad_12l)||0)*(Number(o.precio_unitario_12l)||0),isDebe=$('dMethod').value==='Debe',paid=isDebe?0:(Number($('dPaid').value)||0);if(paid>total||paid<0)return setStatus('mStatus','El cobro debe estar entre $0 y el total del pedido.','err');
+ const {data:u}=await sb.auth.getUser(),now=new Date().toISOString();
+ const d={pedido_id:o.id,cliente_id:o.cliente_id,fecha_hora:now,bidones_vacios_20l:Number($('d20').value)||0,bidones_vacios_12l:Number($('d12').value)||0,bidones_vacios_recibidos:(Number($('d20').value)||0)+(Number($('d12').value)||0),importe_pedido:total,importe_cobrado:paid,medio_pago:$('dMethod').value,observaciones:$('dObs').value.trim()||null,entregado_por:u.user?.id||null};
+ const {data:del,error}=await sb.from('entregas').insert(d).select('id').single();if(error)return setStatus('mStatus','❌ '+error.message,'err');
+ const moves=[];if(o.cantidad_20l||o.cantidad_12l)moves.push({cliente_id:o.cliente_id,entrega_id:del.id,fecha_hora:now,tipo:'Entrega',cantidad_20l:o.cantidad_20l||0,cantidad_12l:o.cantidad_12l||0,observaciones:'Generado desde entrega'});if(Number($('d20').value)||Number($('d12').value))moves.push({cliente_id:o.cliente_id,entrega_id:del.id,fecha_hora:now,tipo:'Devolución',cantidad_20l:Number($('d20').value)||0,cantidad_12l:Number($('d12').value)||0,observaciones:'Devueltos por cliente'});
+ if(moves.length){const r=await sb.from('movimientos_bidones').insert(moves);if(r.error)return setStatus('mStatus','⚠️ Entrega guardada, error en bidones: '+r.error.message,'err')}
+ if(paid>0){const r=await sb.from('pagos').insert({cliente_id:o.cliente_id,entrega_id:del.id,fecha_hora:now,importe:paid,medio_pago:$('dMethod').value,observaciones:'Cobro de entrega',registrado_por:u.user?.id||null});if(r.error)return setStatus('mStatus','⚠️ Entrega guardada, error en pago: '+r.error.message,'err')}
+ const r=await sb.from('pedidos').update({estado:'Entregado'}).eq('id',o.id);if(r.error)return setStatus('mStatus','⚠️ Entrega guardada, pero no cambió el pedido: '+r.error.message,'err');
+ setStatus('mStatus','✅ Entrega completa registrada.','ok');setTimeout(()=>{closeModal();loadOrders();loadHome()},650);
+}
+async function loadToday(){
+ const localToday=today();
+ const {data,error}=await sb.from('pedidos').select('*,clientes(nombre,apellido,direccion,telefono)').eq('fecha_entrega',localToday).in('estado',['Pendiente','En reparto']).order('fecha_pedido');
+ if(error){$('routeList').innerHTML='<div class="status err">❌ '+esc(error.message)+'</div>';return;}
+ const list=data||[];
+ $('todayText').textContent=new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+ $('rStops').textContent=list.length;
+ $('r20').textContent=list.reduce((a,o)=>a+(o.cantidad_20l||0),0);
+ $('r12').textContent=list.reduce((a,o)=>a+(o.cantidad_12l||0),0);
+ $('rSales').textContent=money(list.reduce((a,o)=>a+(o.cantidad_20l||0)*(o.precio_unitario_20l||0)+(o.cantidad_12l||0)*(o.precio_unitario_12l||0),0));
+ $('routeList').innerHTML=list.map(o=>`<div class="card" style="box-shadow:none;border:1px solid var(--line)"><div class="row"><div><b>${esc(clientName(o.clientes))}</b><div class="muted">${esc(o.clientes?.direccion||'Sin dirección')} · ${esc(o.clientes?.telefono||'Sin teléfono')}</div><div style="margin-top:7px">${o.cantidad_20l||0}×20L · ${o.cantidad_12l||0}×12L</div></div><button onclick="openDelivery('${o.id}')">🚚 Entregar</button></div></div>`).join('')||'<div class="empty">🎉 No hay entregas pendientes para hoy.</div>';
+}
+async function loadHome(){
+ await Promise.all([loadClients(),loadPrices()]);const {data:po}=await sb.from('pedidos').select('*,clientes(nombre,apellido,direccion)').eq('fecha_entrega',today()).in('estado',['Pendiente','En reparto']);const {data:sales}=await sb.from('entregas').select('importe_pedido,importe_cobrado').gte('fecha_hora',today()+'T00:00:00').lt('fecha_hora',today()+'T23:59:59');
+ const {data:debt}=await sb.from('v_clientes_saldo').select('saldo_actual');$('kClients').textContent=clients.length;$('kPending').textContent=(po||[]).length;$('kSales').textContent=money((sales||[]).reduce((a,x)=>a+Number(x.importe_pedido||0),0));$('kDebt').textContent=money((debt||[]).reduce((a,x)=>a+Math.max(0,Number(x.saldo_actual)||0),0));
+ $('homeStops').innerHTML=(po||[]).slice(0,6).map(o=>`<div style="padding:10px 0;border-bottom:1px solid var(--line)"><b>${esc(clientName(o.clientes))}</b> · ${o.cantidad_20l||0}×20L ${o.cantidad_12l||0}×12L <span class="muted">· ${esc(o.clientes?.direccion||'Sin dirección')}</span></div>`).join('')||'<div class="empty">No hay pedidos pendientes para hoy.</div>';
+}
+async function loadAccounts(){
+ const {data,error}=await sb.from('v_clientes_saldo').select('*').order('saldo_actual',{ascending:false});if(error)return $('accountBody').innerHTML='<tr><td colspan="3">❌ '+esc(error.message)+'</td></tr>';
+ $('accountBody').innerHTML=(data||[]).filter(x=>Number(x.saldo_actual)>0).map(x=>`<tr><td><button class="small secondary" onclick="openAccountDetail('${x.id}')">👤 ${esc(clientName(x))}</button></td><td class="red"><b>${money(x.saldo_actual)}</b></td><td><button class="small secondary" onclick="openPayment('${x.id}','${esc(clientName(x)).replace(/'/g,'')}')">＋ Registrar pago</button></td></tr>`).join('')||'<tr><td colspan="3" class="empty">🎉 No hay deudas pendientes.</td></tr>';
+}
+
+async function openAccountDetail(id){
+ const c=clients.find(x=>x.id===id);const name=c?clientName(c):'Cliente';
+ const [{data:orders},{data:payments},{data:bottleRows},{data:saldoRow}]=await Promise.all([
+   sb.from('pedidos').select('*').eq('cliente_id',id).order('fecha_entrega',{ascending:true}),
+   sb.from('pagos').select('*').eq('cliente_id',id).order('fecha_hora',{ascending:true}),
+   sb.from('v_bidones_por_cliente').select('*').eq('id',id).maybeSingle(),
+   sb.from('v_clientes_saldo').select('saldo_actual').eq('id',id).maybeSingle()
+ ]);
+ const movements=[];
+ for(const o of orders||[]){
+   const total=(Number(o.cantidad_20l)||0)*(Number(o.precio_unitario_20l)||0)+(Number(o.cantidad_12l)||0)*(Number(o.precio_unitario_12l)||0);
+   if(o.estado==='Entregado')movements.push({date:o.fecha_entrega||'',kind:'🔴 Venta / Debe',detail:`${o.cantidad_20l||0} × 20 L · ${o.cantidad_12l||0} × 12 L`,amount:total});
+ }
+ for(const p of payments||[])movements.push({date:(p.fecha_hora||'').slice(0,10),kind:'🟢 Pago',detail:p.medio_pago||'Pago',amount:-Number(p.importe||0)});
+ movements.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+ let running=Number(c?.deuda_inicial)||0;
+ const history=movements.map(r=>{running+=r.amount;return {...r,balance:running};});
+ const balance=Number(saldoRow?.saldo_actual)||0;
+ showModal(`<div class="row"><div><h2 style="margin:0">💰 ${esc(name)}</h2><div class="muted">${esc(c?.direccion||'Sin dirección')} · ${esc(c?.telefono||'Sin teléfono')}</div></div><button class="small" onclick="openPayment('${id}','${esc(name).replace(/'/g,'')}')">＋ Registrar pago</button></div>
+ <div class="grid" style="margin-top:16px"><div class="kpi"><div class="muted">Saldo actual</div><div class="n ${balance>0?'red':'green'}">${money(balance)}</div></div><div class="kpi"><div class="muted">Bidones 20 L</div><div class="n">${bottleRows?.bidones_20l??0}</div></div><div class="kpi"><div class="muted">Bidones 12 L</div><div class="n">${bottleRows?.bidones_12l??0}</div></div><div class="kpi"><div class="muted">Total bidones</div><div class="n">${bottleRows?.total_bidones??0}</div></div></div>
+ <div class="card" style="box-shadow:none;border:1px solid var(--line);margin-top:15px"><h3 style="margin-top:0">📋 Historial de cuenta</h3><div style="overflow:auto"><table><thead><tr><th>Fecha</th><th>Movimiento</th><th>Detalle</th><th>Importe</th><th>Saldo</th></tr></thead><tbody>${history.map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.kind)}</td><td>${esc(r.detail)}</td><td class="${r.amount<0?'green':'red'}"><b>${r.amount<0?'−':'+'}${money(Math.abs(r.amount))}</b></td><td><b>${money(Math.max(0,r.balance))}</b></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Sin movimientos.</td></tr>'}</tbody></table></div></div>
+ <div class="actions"><button class="secondary" onclick="closeModal()">Cerrar</button></div>`);
+}
+async function openPayment(id,name){
+ const {data}=await sb.from('v_clientes_saldo').select('saldo_actual').eq('id',id).maybeSingle();
+ const debt=Number(data?.saldo_actual)||0;
+ showModal(`<h2>💰 Registrar pago</h2><p><b>${esc(name)}</b></p>
+ <div class="status">🔴 Deuda actual: <b>${money(debt)}</b></div>
+ <div class="field" style="margin-top:12px"><label>Importe a pagar</label><input id="pAmount" type="number" min="0" max="${debt}" step=".01" placeholder="Hasta ${money(debt)}"></div>
+ <div class="field" style="margin-top:10px"><label>Medio</label><select id="pMethod"><option>Efectivo</option><option>Transferencia</option><option>Mercado Pago</option><option>Otro</option></select></div>
+ <div class="status" style="margin-top:12px">Podés registrar un pago <b>parcial o total</b>. El saldo restante se actualizará automáticamente.</div>
+ <div id="mStatus" class="status hidden"></div><div class="actions"><button class="secondary" onclick="closeModal()">Cancelar</button><button onclick="savePayment('${id}',${debt})">Guardar pago</button></div>`);
+}
+async function savePayment(id,debt){
+ const a=Number($('pAmount').value)||0;
+ if(a<=0)return setStatus('mStatus','Ingresá un importe válido.','err');
+ if(a>debt)return setStatus('mStatus','El pago no puede superar la deuda actual de '+money(debt)+'.','err');
+ const {data:u}=await sb.auth.getUser();
+ const r=await sb.from('pagos').insert({cliente_id:id,fecha_hora:new Date().toISOString(),importe:a,medio_pago:$('pMethod').value,registrado_por:u.user?.id||null});
+ if(r.error)return setStatus('mStatus','❌ '+r.error.message,'err');
+ closeModal();await loadAccounts();await loadHome();
+}
+async function loadBottles(){
+ const {data,error}=await sb.from('v_bidones_por_cliente').select('*').order('total_bidones',{ascending:false});if(error)return;
+ const rows=data||[];$('bOut').textContent=rows.reduce((a,x)=>a+Number(x.total_bidones||0),0);const {data:todayD}=await sb.from('entregas').select('bidones_vacios_20l,bidones_vacios_12l,bidones_vacios_recibidos').gte('fecha_hora',today()+'T00:00:00');$('bToday').textContent=(todayD||[]).reduce((a,x)=>a+Number(x.bidones_vacios_20l||0)+Number(x.bidones_vacios_12l||0),0);
+ $('bottleBody').innerHTML=rows.map(x=>{const b20=Number(x.bidones_20l||0),b12=Number(x.bidones_12l||0),tot=Number(x.total_bidones||b20+b12);return `<tr><td><b>${esc(clientName(x))}</b></td><td>${b20}</td><td>${b12}</td><td><b>${tot}</b></td><td>${tot>5?'<span class="badge red">⚠️ Más de 5</span>':'—'}</td></tr>`}).join('')||'<tr><td colspan="5" class="empty">Sin movimientos todavía.</td></tr>';
+}
+async function savePrices(){const p20=Number($('price20Input').value)||0,p12=Number($('price12Input').value)||0;if(!p20&&!p12)return setStatus('priceStatus','Ingresá al menos un precio.','err');await sb.from('precios').update({activo:false}).eq('activo',true).in('producto',['20L','12L']);const rows=[];if(p20)rows.push({producto:'20L',precio:p20,fecha_vigencia:new Date().toISOString(),activo:true});if(p12)rows.push({producto:'12L',precio:p12,fecha_vigencia:new Date().toISOString(),activo:true});const r=await sb.from('precios').insert(rows);if(r.error)return setStatus('priceStatus','❌ '+r.error.message,'err');await loadPrices();setStatus('priceStatus','✅ Precios guardados.','ok')}
+async function loadExpenses(){const {data}=await sb.from('gastos').select('*').order('fecha',{ascending:false});const rows=data||[];$('expenseTotal').textContent='Total listado: '+money(rows.reduce((a,x)=>a+Number(x.importe||0),0));$('expenseBody').innerHTML=rows.map(x=>`<tr><td>${esc(x.fecha||'')}</td><td>${esc(x.categoria||'')}</td><td>${esc(x.descripcion||'')}</td><td><b>${money(x.importe)}</b></td><td>${esc(x.medio_pago||'—')}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">No hay gastos.</td></tr>'}
+function openExpense(){showModal(`<h2>💸 Nuevo gasto</h2><div class="formgrid" style="margin-top:15px"><div class="field"><label>Fecha</label><input id="gDate" type="date" value="${today()}"></div><div class="field"><label>Categoría</label><input id="gCat" placeholder="Combustible, mantenimiento…"></div><div class="field full"><label>Descripción</label><input id="gDesc"></div><div class="field"><label>Importe</label><input id="gAmt" type="number" min="0" step=".01"></div><div class="field"><label>Medio de pago</label><select id="gMethod"><option>Efectivo</option><option>Transferencia</option><option>Mercado Pago</option><option>Otro</option></select></div></div><div id="mStatus" class="status hidden"></div><div class="actions"><button class="secondary" onclick="closeModal()">Cancelar</button><button onclick="saveExpense()">Guardar gasto</button></div>`)}
+async function saveExpense(){const a=Number($('gAmt').value)||0;if(a<=0)return setStatus('mStatus','Ingresá un importe.','err');const {data:u}=await sb.auth.getUser();const r=await sb.from('gastos').insert({fecha:$('gDate').value,categoria:$('gCat').value.trim()||'General',descripcion:$('gDesc').value.trim()||null,importe:a,medio_pago:$('gMethod').value,registrado_por:u.user?.id||null});if(r.error)return setStatus('mStatus','❌ '+r.error.message,'err');closeModal();loadExpenses()}
+function showModal(h){$('modal').innerHTML=h;$('modalBg').classList.remove('hidden')}function closeModal(){$('modalBg').classList.add('hidden');currentOrder=null}
+
+async function loadAnalysis(){
+ const input=$('analysisMonth');
+ if(!input.value) input.value=today().slice(0,7);
+ const ym=input.value, start=ym+'-01';
+ const [y,m]=ym.split('-').map(Number);
+ const end=new Date(y,m,1).toISOString().slice(0,10);
+ const next=new Date(y,m,1); const days=new Date(y,m,0).getDate();
+ const endNext=new Date(y,m,days+1).toISOString().slice(0,10);
+
+ const {data:po,error:oe}=await sb.from('pedidos').select('id,cliente_id,fecha_entrega,cantidad_20l,cantidad_12l,precio_unitario_20l,precio_unitario_12l,estado,clientes(nombre,apellido)').eq('estado','Entregado').gte('fecha_entrega',start).lt('fecha_entrega',endNext);
+ const {data:pa}=await sb.from('pagos').select('cliente_id,fecha_hora,importe,medio_pago').gte('fecha_hora',start+'T00:00:00').lt('fecha_hora',endNext+'T00:00:00');
+ const {data:ga}=await sb.from('gastos').select('fecha,importe').gte('fecha',start).lt('fecha',endNext);
+
+ const orders=oe?[]:(po||[]);
+ const payments=pa||[], expenses=ga||[];
+ const orderTotal=o=>(Number(o.cantidad_20l)||0)*(Number(o.precio_unitario_20l)||0)+(Number(o.cantidad_12l)||0)*(Number(o.precio_unitario_12l)||0);
+ const sales=orders.reduce((s,o)=>s+orderTotal(o),0);
+ const collected=payments.reduce((s,p)=>s+Number(p.importe||0),0);
+ const expenseTotal=expenses.reduce((s,g)=>s+Number(g.importe||0),0);
+ const q20=orders.reduce((s,o)=>s+Number(o.cantidad_20l||0),0), q12=orders.reduce((s,o)=>s+Number(o.cantidad_12l||0),0);
+ const customerSet=new Set(orders.map(o=>o.cliente_id).filter(Boolean));
+ $('aSales').textContent=money(sales);$('aCollected').textContent=money(collected);$('aExpenses').textContent=money(expenseTotal);$('aResult').textContent=money(sales-expenseTotal);
+ $('aOrders').textContent=orders.length;$('a20').textContent=q20;$('a12').textContent=q12;$('aCustomers').textContent=customerSet.size;
+ $('prod20Label').textContent=q20+' bidones';$('prod12Label').textContent=q12+' bidones';
+ const maxQ=Math.max(q20,q12,1);$('prod20Bar').style.width=(q20/maxQ*100)+'%';$('prod12Bar').style.width=(q12/maxQ*100)+'%';
+
+ // Daily sales chart.
+ const daily=Array(days).fill(0);
+ for(const o of orders){const d=Number(String(o.fecha_entrega).slice(8,10));if(d>=1&&d<=days)daily[d-1]+=orderTotal(o);}
+ const maxDay=Math.max(...daily,1);
+ $('salesChart').innerHTML=daily.map((v,i)=>`<div title="${i+1}/${m}: ${money(v)}" style="flex:1;height:100%;display:flex;align-items:flex-end;min-width:5px"><div style="width:100%;height:${Math.max(v/maxDay*100,v?3:0)}%;background:var(--blue);border-radius:5px 5px 0 0"></div></div>`).join('');
+
+ // Payment methods.
+ const pm={};for(const p of payments){const k=p.medio_pago||'Otro';pm[k]=(pm[k]||0)+Number(p.importe||0);}
+ const pmRows=Object.entries(pm).sort((a,b)=>b[1]-a[1]);const pmMax=Math.max(...pmRows.map(x=>x[1]),1);
+ $('paymentChart').innerHTML=pmRows.length?pmRows.map(([k,v])=>`<div style="margin:11px 0"><div class="row"><b>${esc(k)}</b><span>${money(v)}</span></div><div style="height:11px;background:#edf3f6;border-radius:999px;margin-top:6px"><div style="height:100%;width:${v/pmMax*100}%;background:var(--blue);border-radius:999px"></div></div></div>`).join(''):'<div class="empty">No hay pagos registrados en este período.</div>';
+
+ // Top clients.
+ const by={};for(const o of orders){const id=o.cliente_id;if(!id)continue;if(!by[id])by[id]={name:clientName(o.clientes),orders:0,bottles:0,sales:0,collected:0};by[id].orders++;by[id].bottles+=(Number(o.cantidad_20l)||0)+(Number(o.cantidad_12l)||0);by[id].sales+=orderTotal(o);}
+ for(const p of payments){if(by[p.cliente_id])by[p.cliente_id].collected+=Number(p.importe||0);}
+ const top=Object.values(by).sort((a,b)=>b.sales-a.sales).slice(0,10);
+ $('topClientsBody').innerHTML=top.map(x=>`<tr><td><b>${esc(x.name)}</b></td><td>${x.orders}</td><td>${x.bottles}</td><td>${money(x.sales)}</td><td>${money(x.collected)}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">No hay ventas entregadas en este mes.</td></tr>';
+
+ const monthName=new Date(y,m-1,1).toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+ $('analysisNarrative').innerHTML=`Durante <b>${esc(monthName)}</b> se registraron <b>${orders.length}</b> pedidos entregados, con <b>${q20+q12}</b> bidones vendidos (${q20} de 20 L y ${q12} de 12 L). La facturación por pedidos entregados fue de <b>${money(sales)}</b>, se registraron <b>${money(collected)}</b> en pagos y <b>${money(expenseTotal)}</b> en gastos. El resultado estimado, antes de otros costos no registrados, es de <b>${money(sales-expenseTotal)}</b>.`;
+}
+
+async function loadAll(){await loadClients();await loadPrices();loadOrders();loadHome()}
+boot();
+</script>
+</body></html>

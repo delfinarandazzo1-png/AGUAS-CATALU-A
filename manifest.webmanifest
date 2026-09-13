@@ -1,0 +1,13 @@
+{
+  "name": "AGUAS CATALUÑA",
+  "short_name": "AGUAS CATALUÑA",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f8fa",
+  "theme_color": "#2c8fc4",
+  "lang": "es-AR",
+  "icons": [
+    {"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}
