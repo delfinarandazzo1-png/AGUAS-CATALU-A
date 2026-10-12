@@ -314,7 +314,7 @@ async function saveDelivery(){
  const moves=[];if(o.cantidad_20l||o.cantidad_12l)moves.push({cliente_id:o.cliente_id,entrega_id:del.id,fecha_hora:now,tipo:'Entrega',cantidad_20l:o.cantidad_20l||0,cantidad_12l:o.cantidad_12l||0,observaciones:'Generado desde entrega'});if(Number($('d20').value)||Number($('d12').value))moves.push({cliente_id:o.cliente_id,entrega_id:del.id,fecha_hora:now,tipo:'Devolución',cantidad_20l:Number($('d20').value)||0,cantidad_12l:Number($('d12').value)||0,observaciones:'Devueltos por cliente'});
  if(moves.length){const r=await sb.from('movimientos_bidones').insert(moves);if(r.error)return setStatus('mStatus','⚠️ Entrega guardada, error en bidones: '+r.error.message,'err')}
  if(paid>0){const r=await sb.from('pagos').insert({cliente_id:o.cliente_id,entrega_id:del.id,fecha_hora:now,importe:paid,medio_pago:$('dMethod').value,observaciones:'Cobro de entrega',registrado_por:u.user?.id||null});if(r.error)return setStatus('mStatus','⚠️ Entrega guardada, error en pago: '+r.error.message,'err')}
- const r=await sb.from('pedidos').update({estado:'Entregado'}).eq('id',o.id);if(r.error)return setStatus('mStatus','⚠️ Entrega guardada, pero no cambió el pedido: '+r.error.message,'err');
+ const r=await sb.from('pedidos').update({estado:'Entregado',fecha_entrega:deliveryDate}).eq('id',o.id);if(r.error)return setStatus('mStatus','⚠️ Entrega guardada, pero no cambió el pedido: '+r.error.message,'err');
  setStatus('mStatus','✅ Entrega completa registrada.','ok');setTimeout(()=>{closeModal();loadOrders();loadHome()},650);
 }
 async function loadToday(){
@@ -406,12 +406,14 @@ function openExpense(){showModal(`<h2>💸 Nuevo gasto</h2><div class="formgrid"
 async function saveExpense(){const a=Number($('gAmt').value)||0;if(a<=0)return setStatus('mStatus','Ingresá un importe.','err');const {data:u}=await sb.auth.getUser();const r=await sb.from('gastos').insert({fecha:$('gDate').value,categoria:$('gCat').value.trim()||'General',descripcion:$('gDesc').value.trim()||null,importe:a,medio_pago:$('gMethod').value,registrado_por:u.user?.id||null});if(r.error)return setStatus('mStatus','❌ '+r.error.message,'err');closeModal();loadExpenses()}
 let inactiveRows=[];
 async function loadInactive(){
- const [{data:cs,error:ce},{data:ds,error:de}]=await Promise.all([
+ const [{data:cs,error:ce},{data:ps,error:pe}]=await Promise.all([
   sb.from('clientes').select('id,nombre,apellido,telefono,direccion,tipo_cliente,activo').eq('activo',true),
-  sb.from('entregas').select('cliente_id,fecha_hora').order('fecha_hora',{ascending:false})
+  sb.from('pedidos').select('cliente_id,fecha_entrega,estado').eq('estado','Entregado').not('fecha_entrega','is',null).order('fecha_entrega',{ascending:false})
  ]);
- if(ce||de){$('inactiveBody').innerHTML=`<tr><td colspan="5" class="empty">No se pudo cargar el seguimiento: ${esc((ce||de).message)}</td></tr>`;return;}
- const last={};(ds||[]).forEach(d=>{if(d.cliente_id&&!last[d.cliente_id])last[d.cliente_id]=String(d.fecha_hora||'').slice(0,10)});
+ if(ce||pe){$('inactiveBody').innerHTML=`<tr><td colspan="5" class="empty">No se pudo cargar el seguimiento: ${esc((ce||pe).message)}</td></tr>`;return;}
+ // La última compra se calcula desde la fecha real guardada en el pedido entregado,
+ // no desde fecha_hora de la entrega (que en registros antiguos puede ser el día de carga).
+ const last={};(ps||[]).forEach(p=>{if(p.cliente_id&&!last[p.cliente_id]&&p.fecha_entrega)last[p.cliente_id]=String(p.fecha_entrega).slice(0,10)});
  const now=new Date(today()+'T12:00:00');inactiveRows=(cs||[]).map(c=>{const lastDate=last[c.id]||null;const days=lastDate?Math.max(0,Math.floor((now-new Date(lastDate+'T12:00:00'))/86400000)):null;return {...c,lastDate,days}}).sort((a,b)=>{if(a.days===null&&b.days!==null)return -1;if(b.days===null&&a.days!==null)return 1;return (b.days||0)-(a.days||0)});
  renderInactive();
 }
