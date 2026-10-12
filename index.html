@@ -45,6 +45,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
   <button data-page="home" onclick="go('home')">🏠 <span>Inicio</span></button>
   <button data-page="clientes" onclick="go('clientes')">👥 <span>Clientes</span></button>
   <button data-page="pedidos" onclick="go('pedidos')">📦 <span>Pedidos</span></button>
+  <button data-page="seguimiento" onclick="go('seguimiento')">⏳ <span>Clientes sin comprar</span></button>
   <button data-page="reparto" onclick="go('reparto')">🚚 <span>Reparto</span></button>
   <button data-page="cuentas" onclick="go('cuentas')">💰 <span>Cuenta corriente</span></button>
   <button data-page="bidones" onclick="go('bidones')">🧴 <span>Bidones</span></button>
@@ -79,6 +80,12 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
   <div class="card"><div class="row"><div><h2 style="margin:0">📦 Pedidos</h2><div class="muted">Los pedidos se convierten en entregas desde acá.</div></div></div><div style="overflow:auto;margin-top:12px"><table><thead><tr><th>Cliente</th><th>Fecha</th><th>Pedido</th><th>Total</th><th>Estado</th><th></th></tr></thead><tbody id="orderBody"></tbody></table></div></div>
  </section>
 
+ <section id="page-seguimiento" class="page">
+  <div class="hero"><h1>⏳ Clientes sin comprar</h1><p>Ordenados de mayor a menor según los días desde su última entrega registrada.</p></div>
+  <div class="toolbar"><input id="inactiveSearch" placeholder="Buscar cliente..." oninput="renderInactive()"><select id="inactiveType" onchange="renderInactive()"><option value="">Todos los clientes</option><option>A demanda</option><option>Dispenser</option></select><button class="secondary" onclick="loadInactive()">↻ Actualizar</button></div>
+  <div class="card"><div class="muted">Los clientes que nunca tuvieron una entrega registrada aparecen primero como “Sin compras registradas”.</div><div style="overflow:auto;margin-top:12px"><table><thead><tr><th>Cliente</th><th>Teléfono</th><th>Última compra</th><th>Días sin comprar</th><th></th></tr></thead><tbody id="inactiveBody"></tbody></table></div></div>
+ </section>
+
  <section id="page-reparto" class="page">
   <div class="hero"><h1>🚚 Reparto de hoy</h1><p id="todayText"></p></div>
   <div class="grid">
@@ -92,7 +99,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
  </section>
 
  <section id="page-bidones" class="page">
-  <div class="grid"><div class="kpi"><div class="muted">Con clientes</div><div class="n" id="bOut">0</div></div><div class="kpi"><div class="muted">Entregados hoy</div><div class="n" id="bToday">0</div></div></div>
+  <div class="grid"><div class="kpi"><div class="muted">🔴 Bidones que deben los clientes</div><div class="n red" id="bOut">0</div></div><div class="kpi"><div class="muted">🟢 Vacíos recibidos de clientes</div><div class="n green" id="bToday">0</div></div><div class="kpi"><div class="muted">📦 Vacíos disponibles según devoluciones</div><div class="n" id="bEmptyStock">0</div></div></div>
   <div class="card"><div class="row"><h2 style="margin:0">🧴 Bidones por cliente</h2><button class="secondary" onclick="loadBottles()">↻ Actualizar</button></div><div style="overflow:auto;margin-top:12px"><table><thead><tr><th>Cliente</th><th>20 L</th><th>12 L</th><th>Total</th><th>Alerta</th></tr></thead><tbody id="bottleBody"></tbody></table></div></div>
  </section>
 
@@ -173,8 +180,8 @@ function setStatus(id,t,c=''){const x=$(id);x.className='status '+c;x.textConten
 function go(page){
  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$('page-'+page).classList.add('active');
  document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));
- const names={home:'Inicio',clientes:'Clientes',pedidos:'Pedidos',reparto:'Reparto de hoy',cuentas:'Cuenta corriente',bidones:'Bidones',precios:'Precios',gastos:'Gastos',analisis:'Análisis mensual'};$('pageTitle').textContent=names[page];
- if(page==='home')loadHome();if(page==='clientes')renderClients();if(page==='pedidos')loadOrders();if(page==='reparto')loadToday();if(page==='cuentas')loadAccounts();if(page==='bidones')loadBottles();if(page==='precios')loadPrices();if(page==='gastos')loadExpenses();if(page==='analisis')loadAnalysis();
+ const names={home:'Inicio',clientes:'Clientes',pedidos:'Pedidos',seguimiento:'Clientes sin comprar',reparto:'Reparto de hoy',cuentas:'Cuenta corriente',bidones:'Bidones',precios:'Precios',gastos:'Gastos',analisis:'Análisis mensual'};$('pageTitle').textContent=names[page];
+ if(page==='home')loadHome();if(page==='clientes')renderClients();if(page==='pedidos')loadOrders();if(page==='seguimiento')loadInactive();if(page==='reparto')loadToday();if(page==='cuentas')loadAccounts();if(page==='bidones')loadBottles();if(page==='precios')loadPrices();if(page==='gastos')loadExpenses();if(page==='analisis')loadAnalysis();
 }
 async function signIn(){
  const url=$('supUrl').value.trim().replace(/\/$/,'');
@@ -213,6 +220,7 @@ async function loadPrices(){
  for(const p of data||[]){const n=Number(p.precio)||0;if(p.producto==='20L'&&!prices[20])prices[20]=n;if(p.producto==='12L'&&!prices[12])prices[12]=n}
  $('price20Input').value=prices[20]||'';$('price12Input').value=prices[12]||'';
 }
+function formatDate(v){if(!v)return '—';const a=String(v).slice(0,10).split('-');return a.length===3?`${a[2]}/${a[1]}/${a[0]}`:String(v)}
 function clientName(c){return ((c?.nombre||'')+' '+(c?.apellido||'')).trim()||'Sin nombre'}
 async function renderClients(){
  await loadClients();const q=($('clientSearch')?.value||'').toLowerCase(),t=$('clientType')?.value||'';
@@ -244,14 +252,50 @@ async function saveOrder(){
  const {error}=await sb.from('pedidos').insert(p);if(error)return setStatus('mStatus','❌ '+error.message,'err');closeModal();loadOrders();
 }
 async function loadOrders(){
- const {data,error}=await sb.from('pedidos').select('*,clientes(nombre,apellido,direccion)').order('fecha_pedido',{ascending:false});orders=data||[];if(error)return;
- $('orderBody').innerHTML=orders.map(o=>{const total=(Number(o.cantidad_20l)||0)*(Number(o.precio_unitario_20l)||0)+(Number(o.cantidad_12l)||0)*(Number(o.precio_unitario_12l)||0);return `<tr><td><b>${esc(clientName(o.clientes))}</b><br><span class="muted">${esc(o.clientes?.direccion||'')}</span></td><td>${esc(o.fecha_entrega||'—')}</td><td>${o.cantidad_20l||0}×20L · ${o.cantidad_12l||0}×12L</td><td><b>${money(total)}</b></td><td><span class="badge ${o.estado==='Entregado'?'green':'orange'}">${esc(o.estado)}</span></td><td>${['Pendiente','En reparto'].includes(o.estado)?`<button class="small" onclick="openDelivery('${o.id}')">🚚 Entregar</button>`:''}</td></tr>`}).join('')||'<tr><td colspan="6" class="empty">No hay pedidos.</td></tr>';
+ const {data,error}=await sb.from('pedidos').select('*,clientes(nombre,apellido,direccion)').order('fecha_entrega',{ascending:false,nullsFirst:false}).order('fecha_pedido',{ascending:false});orders=data||[];if(error)return;
+ $('orderBody').innerHTML=orders.map(o=>{const total=(Number(o.cantidad_20l)||0)*(Number(o.precio_unitario_20l)||0)+(Number(o.cantidad_12l)||0)*(Number(o.precio_unitario_12l)||0);return `<tr><td><b>${esc(clientName(o.clientes))}</b><br><span class="muted">${esc(o.clientes?.direccion||'')}</span></td><td><b>${formatDate(o.fecha_entrega)}</b></td><td>${o.cantidad_20l||0}×20L · ${o.cantidad_12l||0}×12L</td><td><b>${money(total)}</b></td><td><span class="badge ${o.estado==='Entregado'?'green':'orange'}">${esc(o.estado)}</span></td><td>${['Pendiente','En reparto'].includes(o.estado)?`<button class="small" onclick="openDelivery('${o.id}')">🚚 Entregar</button>`:''} <button class="small secondary" onclick="openEditOrder('${o.id}')">✏️ Editar</button> <button class="small danger" onclick="deleteOrder('${o.id}')">🗑️ Eliminar</button></td></tr>`}).join('')||'<tr><td colspan="6" class="empty">No hay pedidos.</td></tr>';
 }
+async function openEditOrder(id){
+ const o=orders.find(x=>x.id===id);if(!o)return;
+ showModal(`<h2>✏️ Editar pedido</h2><div class="formgrid" style="margin-top:15px"><div class="field full"><label>Cliente</label><select id="eClient">${clients.map(c=>`<option value="${c.id}" ${c.id===o.cliente_id?'selected':''}>${esc(clientName(c))}${c.direccion?' · '+esc(c.direccion):''}</option>`).join('')}</select></div><div class="field"><label>Fecha del pedido / entrega prevista</label><input id="eDate" type="date" value="${esc(o.fecha_entrega||'')}"></div><div class="field"><label>Estado</label><select id="eState"><option ${o.estado==='Pendiente'?'selected':''}>Pendiente</option><option ${o.estado==='En reparto'?'selected':''}>En reparto</option><option ${o.estado==='Entregado'?'selected':''}>Entregado</option></select></div><div class="field"><label>Bidones 20 L</label><input id="e20" type="number" min="0" value="${Number(o.cantidad_20l)||0}"></div><div class="field"><label>Bidones 12 L</label><input id="e12" type="number" min="0" value="${Number(o.cantidad_12l)||0}"></div><div class="field full"><label>Observaciones</label><textarea id="eObs">${esc(o.observaciones||'')}</textarea></div></div><div id="mStatus" class="status hidden"></div><div class="actions"><button class="secondary" onclick="closeModal()">Cancelar</button><button onclick="saveEditedOrder('${id}')">Guardar cambios</button></div>`);
+}
+async function saveEditedOrder(id){
+ const o=orders.find(x=>x.id===id);if(!o)return;
+ const cid=$('eClient').value,q20=Number($('e20').value)||0,q12=Number($('e12').value)||0,date=$('eDate').value,state=$('eState').value;
+ if(!cid||q20+q12<=0)return setStatus('mStatus','Elegí un cliente y al menos un bidón.','err');
+ const total=q20*(Number(o.precio_unitario_20l)||0)+q12*(Number(o.precio_unitario_12l)||0);
+ const r=await sb.from('pedidos').update({cliente_id:cid,fecha_entrega:date||null,cantidad_20l:q20,cantidad_12l:q12,estado,observaciones:$('eObs').value.trim()||null}).eq('id',id);
+ if(r.error)return setStatus('mStatus','❌ '+r.error.message,'err');
+ const {data:del,error:de}=await sb.from('entregas').select('*').eq('pedido_id',id).maybeSingle();
+ if(de)return setStatus('mStatus','Pedido actualizado, pero no se pudo verificar la entrega: '+de.message,'err');
+ if(del){
+  const upd=await sb.from('entregas').update({cliente_id:cid,importe_pedido:total}).eq('id',del.id);
+  if(upd.error)return setStatus('mStatus','Pedido actualizado, pero falló la sincronización de la entrega: '+upd.error.message,'err');
+  await sb.from('movimientos_bidones').update({cliente_id:cid,cantidad_20l:q20,cantidad_12l:q12}).eq('entrega_id',del.id).eq('tipo','Entrega');
+  await sb.from('movimientos_bidones').update({cliente_id:cid}).eq('entrega_id',del.id).eq('tipo','Devolución');
+  await sb.from('pagos').update({cliente_id:cid}).eq('entrega_id',del.id);
+ }
+ closeModal();await loadOrders();await loadToday();await loadInactive();
+}
+async function deleteOrder(id){
+ const o=orders.find(x=>x.id===id);if(!o)return;
+ const warning=o.estado==='Entregado'?'Este pedido ya fue entregado. Se eliminarán también su entrega, los pagos asociados y los movimientos de bidones vinculados. Esta acción no se puede deshacer.':'Esta acción no se puede deshacer.';
+ if(!confirm(`¿Eliminar el pedido de ${clientName(o.clientes)}?\n${warning}`))return;
+ const {data:del,error}=await sb.from('entregas').select('id').eq('pedido_id',id).maybeSingle();if(error){alert('No se pudo consultar la entrega: '+error.message);return;}
+ if(del){
+  for(const table of ['pagos','movimientos_bidones']){const r=await sb.from(table).delete().eq('entrega_id',del.id);if(r.error){alert('No se pudo eliminar en '+table+': '+r.error.message+'. El pedido no se borró.');return;}}
+  const rd=await sb.from('entregas').delete().eq('id',del.id);if(rd.error){alert('No se pudo eliminar la entrega: '+rd.error.message);return;}
+ }
+ const r=await sb.from('pedidos').delete().eq('id',id);if(r.error){alert('No se pudo eliminar el pedido: '+r.error.message);return;}
+ await loadOrders();await loadHome();await loadToday();await loadInactive();alert('Pedido eliminado.');
+}
+async function openEditOrderDate(id){return openEditOrder(id)}
+async function saveOrderDate(id){return saveEditedOrder(id)}
 async function openDelivery(id){
  currentOrder=orders.find(x=>x.id===id);const o=currentOrder,total=(Number(o.cantidad_20l)||0)*(Number(o.precio_unitario_20l)||0)+(Number(o.cantidad_12l)||0)*(Number(o.precio_unitario_12l)||0);
  let prior=0;const {data}=await sb.from('v_clientes_saldo').select('saldo_actual').eq('id',o.cliente_id).maybeSingle();prior=Number(data?.saldo_actual)||0;
  showModal(`<h2>🚚 Registrar entrega</h2><p><b>${esc(clientName(o.clientes))}</b><br><span class="muted">${esc(o.clientes?.direccion||'Sin dirección')}</span></p><div class="status">Pedido: <b>${o.cantidad_20l||0}×20L · ${o.cantidad_12l||0}×12L</b><br>Total: <b>${money(total)}</b>${prior?`<br>🔴 Deuda anterior: <b>${money(prior)}</b>`:''}<br><span class="muted">Los vacíos de 20 L y 12 L se controlan por separado. Si elegís <b>🔴 Debe</b>, la entrega queda sin cobro y el importe pasa a la cuenta corriente.</span></div>
- <div class="formgrid" style="margin-top:14px"><div class="field"><label>Vacíos 20 L recibidos</label><input id="d20" type="number" min="0" value="0"></div><div class="field"><label>Vacíos 12 L recibidos</label><input id="d12" type="number" min="0" value="0"></div><div class="field"><label>Importe cobrado ahora</label><input id="dPaid" type="number" min="0" step=".01" value="${total}"></div><div class="field"><label>Medio de pago</label><select id="dMethod" onchange="toggleDebe()"><option>Efectivo</option><option>Transferencia</option><option>Mercado Pago</option><option>Otro</option><option value="Debe">🔴 Debe</option></select></div><div class="field full"><label>Observaciones</label><textarea id="dObs"></textarea></div></div>
+ <div class="formgrid" style="margin-top:14px"><div class="field"><label>Vacíos 20 L recibidos</label><input id="d20" type="number" min="0" value="0"></div><div class="field"><label>Vacíos 12 L recibidos</label><input id="d12" type="number" min="0" value="0"></div><div class="field"><label>Fecha real de entrega</label><input id="dDate" type="date" value="${today()}"></div><div class="field"><label>Importe cobrado ahora</label><input id="dPaid" type="number" min="0" step=".01" value="${total}"></div><div class="field"><label>Medio de pago</label><select id="dMethod" onchange="toggleDebe()"><option>Efectivo</option><option>Transferencia</option><option>Mercado Pago</option><option>Otro</option><option value="Debe">🔴 Debe</option></select></div><div class="field full"><label>Observaciones</label><textarea id="dObs"></textarea></div></div>
  <div id="mStatus" class="status hidden"></div><div class="actions"><button class="secondary" onclick="closeModal()">Cancelar</button><button class="green" onclick="saveDelivery()">✓ Confirmar entrega</button></div>`);
 }
 
@@ -264,7 +308,7 @@ function toggleDebe(){
 
 async function saveDelivery(){
  const o=currentOrder,total=(Number(o.cantidad_20l)||0)*(Number(o.precio_unitario_20l)||0)+(Number(o.cantidad_12l)||0)*(Number(o.precio_unitario_12l)||0),isDebe=$('dMethod').value==='Debe',paid=isDebe?0:(Number($('dPaid').value)||0);if(paid>total||paid<0)return setStatus('mStatus','El cobro debe estar entre $0 y el total del pedido.','err');
- const {data:u}=await sb.auth.getUser(),now=new Date().toISOString();
+ const {data:u}=await sb.auth.getUser(),deliveryDate=$('dDate').value||today(),now=deliveryDate+'T12:00:00';
  const d={pedido_id:o.id,cliente_id:o.cliente_id,fecha_hora:now,bidones_vacios_20l:Number($('d20').value)||0,bidones_vacios_12l:Number($('d12').value)||0,bidones_vacios_recibidos:(Number($('d20').value)||0)+(Number($('d12').value)||0),importe_pedido:total,importe_cobrado:paid,medio_pago:$('dMethod').value,observaciones:$('dObs').value.trim()||null,entregado_por:u.user?.id||null};
  const {data:del,error}=await sb.from('entregas').insert(d).select('id').single();if(error)return setStatus('mStatus','❌ '+error.message,'err');
  const moves=[];if(o.cantidad_20l||o.cantidad_12l)moves.push({cliente_id:o.cliente_id,entrega_id:del.id,fecha_hora:now,tipo:'Entrega',cantidad_20l:o.cantidad_20l||0,cantidad_12l:o.cantidad_12l||0,observaciones:'Generado desde entrega'});if(Number($('d20').value)||Number($('d12').value))moves.push({cliente_id:o.cliente_id,entrega_id:del.id,fecha_hora:now,tipo:'Devolución',cantidad_20l:Number($('d20').value)||0,cantidad_12l:Number($('d12').value)||0,observaciones:'Devueltos por cliente'});
@@ -308,15 +352,23 @@ async function openAccountDetail(id){
    const total=(Number(o.cantidad_20l)||0)*(Number(o.precio_unitario_20l)||0)+(Number(o.cantidad_12l)||0)*(Number(o.precio_unitario_12l)||0);
    if(o.estado==='Entregado')movements.push({date:o.fecha_entrega||'',kind:'🔴 Venta / Debe',detail:`${o.cantidad_20l||0} × 20 L · ${o.cantidad_12l||0} × 12 L`,amount:total});
  }
- for(const p of payments||[])movements.push({date:(p.fecha_hora||'').slice(0,10),kind:'🟢 Pago',detail:p.medio_pago||'Pago',amount:-Number(p.importe||0)});
+ for(const p of payments||[])movements.push({date:(p.fecha_hora||'').slice(0,10),kind:'🟢 Pago',detail:p.medio_pago||'Pago',amount:-Number(p.importe||0),paymentId:p.id,entregaId:p.entrega_id});
  movements.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
  let running=Number(c?.deuda_inicial)||0;
  const history=movements.map(r=>{running+=r.amount;return {...r,balance:running};});
  const balance=Number(saldoRow?.saldo_actual)||0;
  showModal(`<div class="row"><div><h2 style="margin:0">💰 ${esc(name)}</h2><div class="muted">${esc(c?.direccion||'Sin dirección')} · ${esc(c?.telefono||'Sin teléfono')}</div></div><button class="small" onclick="openPayment('${id}','${esc(name).replace(/'/g,'')}')">＋ Registrar pago</button></div>
  <div class="grid" style="margin-top:16px"><div class="kpi"><div class="muted">Saldo actual</div><div class="n ${balance>0?'red':'green'}">${money(balance)}</div></div><div class="kpi"><div class="muted">Bidones 20 L</div><div class="n">${bottleRows?.bidones_20l??0}</div></div><div class="kpi"><div class="muted">Bidones 12 L</div><div class="n">${bottleRows?.bidones_12l??0}</div></div><div class="kpi"><div class="muted">Total bidones</div><div class="n">${bottleRows?.total_bidones??0}</div></div></div>
- <div class="card" style="box-shadow:none;border:1px solid var(--line);margin-top:15px"><h3 style="margin-top:0">📋 Historial de cuenta</h3><div style="overflow:auto"><table><thead><tr><th>Fecha</th><th>Movimiento</th><th>Detalle</th><th>Importe</th><th>Saldo</th></tr></thead><tbody>${history.map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.kind)}</td><td>${esc(r.detail)}</td><td class="${r.amount<0?'green':'red'}"><b>${r.amount<0?'−':'+'}${money(Math.abs(r.amount))}</b></td><td><b>${money(Math.max(0,r.balance))}</b></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Sin movimientos.</td></tr>'}</tbody></table></div></div>
+ <div class="card" style="box-shadow:none;border:1px solid var(--line);margin-top:15px"><h3 style="margin-top:0">📋 Historial de cuenta</h3><div style="overflow:auto"><table><thead><tr><th>Fecha</th><th>Movimiento</th><th>Detalle</th><th>Importe</th><th>Saldo</th><th></th></tr></thead><tbody>${history.map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.kind)}</td><td>${esc(r.detail)}</td><td class="${r.amount<0?'green':'red'}"><b>${r.amount<0?'−':'+'}${money(Math.abs(r.amount))}</b></td><td><b>${money(Math.max(0,r.balance))}</b></td><td>${r.paymentId?`<button class="small secondary" onclick="voidPayment('${r.paymentId}','${id}')">↩️ Anular pago</button>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">Sin movimientos.</td></tr>'}</tbody></table></div></div>
  <div class="actions"><button class="secondary" onclick="closeModal()">Cerrar</button></div>`);
+}
+async function voidPayment(paymentId,clientId){
+ if(!confirm('¿Anular este pago? La deuda del cliente aumentará nuevamente por ese importe.'))return;
+ const {data:p,error}=await sb.from('pagos').select('id,importe,entrega_id').eq('id',paymentId).maybeSingle();
+ if(error||!p)return alert('No se encontró el pago.');
+ if(p.entrega_id){await sb.from('entregas').update({importe_cobrado:0,medio_pago:'Debe'}).eq('id',p.entrega_id);}
+ const r=await sb.from('pagos').delete().eq('id',paymentId);if(r.error)return alert('No se pudo anular: '+r.error.message);
+ await loadAccounts();await loadHome();openAccountDetail(clientId);
 }
 async function openPayment(id,name){
  const {data}=await sb.from('v_clientes_saldo').select('saldo_actual').eq('id',id).maybeSingle();
@@ -339,13 +391,32 @@ async function savePayment(id,debt){
 }
 async function loadBottles(){
  const {data,error}=await sb.from('v_bidones_por_cliente').select('*').order('total_bidones',{ascending:false});if(error)return;
- const rows=data||[];$('bOut').textContent=rows.reduce((a,x)=>a+Number(x.total_bidones||0),0);const {data:todayD}=await sb.from('entregas').select('bidones_vacios_20l,bidones_vacios_12l,bidones_vacios_recibidos').gte('fecha_hora',today()+'T00:00:00');$('bToday').textContent=(todayD||[]).reduce((a,x)=>a+Number(x.bidones_vacios_20l||0)+Number(x.bidones_vacios_12l||0),0);
+ const rows=data||[];
+ const owed20=rows.reduce((a,x)=>a+Number(x.bidones_20l||0),0),owed12=rows.reduce((a,x)=>a+Number(x.bidones_12l||0),0);
+ $('bOut').textContent=owed20+owed12;
+ const {data:allD}=await sb.from('entregas').select('bidones_vacios_20l,bidones_vacios_12l');
+ const received=(allD||[]).reduce((a,x)=>a+Number(x.bidones_vacios_20l||0)+Number(x.bidones_vacios_12l||0),0);
+ $('bToday').textContent=received;
+ $('bEmptyStock').textContent=received;
  $('bottleBody').innerHTML=rows.map(x=>{const b20=Number(x.bidones_20l||0),b12=Number(x.bidones_12l||0),tot=Number(x.total_bidones||b20+b12);return `<tr><td><b>${esc(clientName(x))}</b></td><td>${b20}</td><td>${b12}</td><td><b>${tot}</b></td><td>${tot>5?'<span class="badge red">⚠️ Más de 5</span>':'—'}</td></tr>`}).join('')||'<tr><td colspan="5" class="empty">Sin movimientos todavía.</td></tr>';
 }
 async function savePrices(){const p20=Number($('price20Input').value)||0,p12=Number($('price12Input').value)||0;if(!p20&&!p12)return setStatus('priceStatus','Ingresá al menos un precio.','err');await sb.from('precios').update({activo:false}).eq('activo',true).in('producto',['20L','12L']);const rows=[];if(p20)rows.push({producto:'20L',precio:p20,fecha_vigencia:new Date().toISOString(),activo:true});if(p12)rows.push({producto:'12L',precio:p12,fecha_vigencia:new Date().toISOString(),activo:true});const r=await sb.from('precios').insert(rows);if(r.error)return setStatus('priceStatus','❌ '+r.error.message,'err');await loadPrices();setStatus('priceStatus','✅ Precios guardados.','ok')}
 async function loadExpenses(){const {data}=await sb.from('gastos').select('*').order('fecha',{ascending:false});const rows=data||[];$('expenseTotal').textContent='Total listado: '+money(rows.reduce((a,x)=>a+Number(x.importe||0),0));$('expenseBody').innerHTML=rows.map(x=>`<tr><td>${esc(x.fecha||'')}</td><td>${esc(x.categoria||'')}</td><td>${esc(x.descripcion||'')}</td><td><b>${money(x.importe)}</b></td><td>${esc(x.medio_pago||'—')}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">No hay gastos.</td></tr>'}
 function openExpense(){showModal(`<h2>💸 Nuevo gasto</h2><div class="formgrid" style="margin-top:15px"><div class="field"><label>Fecha</label><input id="gDate" type="date" value="${today()}"></div><div class="field"><label>Categoría</label><input id="gCat" placeholder="Combustible, mantenimiento…"></div><div class="field full"><label>Descripción</label><input id="gDesc"></div><div class="field"><label>Importe</label><input id="gAmt" type="number" min="0" step=".01"></div><div class="field"><label>Medio de pago</label><select id="gMethod"><option>Efectivo</option><option>Transferencia</option><option>Mercado Pago</option><option>Otro</option></select></div></div><div id="mStatus" class="status hidden"></div><div class="actions"><button class="secondary" onclick="closeModal()">Cancelar</button><button onclick="saveExpense()">Guardar gasto</button></div>`)}
 async function saveExpense(){const a=Number($('gAmt').value)||0;if(a<=0)return setStatus('mStatus','Ingresá un importe.','err');const {data:u}=await sb.auth.getUser();const r=await sb.from('gastos').insert({fecha:$('gDate').value,categoria:$('gCat').value.trim()||'General',descripcion:$('gDesc').value.trim()||null,importe:a,medio_pago:$('gMethod').value,registrado_por:u.user?.id||null});if(r.error)return setStatus('mStatus','❌ '+r.error.message,'err');closeModal();loadExpenses()}
+let inactiveRows=[];
+async function loadInactive(){
+ const [{data:cs,error:ce},{data:ds,error:de}]=await Promise.all([
+  sb.from('clientes').select('id,nombre,apellido,telefono,direccion,tipo_cliente,activo').eq('activo',true),
+  sb.from('entregas').select('cliente_id,fecha_hora').order('fecha_hora',{ascending:false})
+ ]);
+ if(ce||de){$('inactiveBody').innerHTML=`<tr><td colspan="5" class="empty">No se pudo cargar el seguimiento: ${esc((ce||de).message)}</td></tr>`;return;}
+ const last={};(ds||[]).forEach(d=>{if(d.cliente_id&&!last[d.cliente_id])last[d.cliente_id]=String(d.fecha_hora||'').slice(0,10)});
+ const now=new Date(today()+'T12:00:00');inactiveRows=(cs||[]).map(c=>{const lastDate=last[c.id]||null;const days=lastDate?Math.max(0,Math.floor((now-new Date(lastDate+'T12:00:00'))/86400000)):null;return {...c,lastDate,days}}).sort((a,b)=>{if(a.days===null&&b.days!==null)return -1;if(b.days===null&&a.days!==null)return 1;return (b.days||0)-(a.days||0)});
+ renderInactive();
+}
+function renderInactive(){const q=($('inactiveSearch')?.value||'').toLowerCase().trim(),t=$('inactiveType')?.value||'';const rows=inactiveRows.filter(c=>(!q||[c.nombre,c.apellido,c.telefono,c.direccion].join(' ').toLowerCase().includes(q))&&(!t||c.tipo_cliente===t));$('inactiveBody').innerHTML=rows.map(c=>`<tr><td><b>${esc(clientName(c))}</b><br><span class="muted">${esc(c.direccion||'')}</span></td><td>${esc(c.telefono||'—')}</td><td>${c.lastDate?formatDate(c.lastDate):'<span class="muted">Sin compras registradas</span>'}</td><td><b class="${c.days!==null&&c.days>=30?'red':''}">${c.days===null?'—':c.days+' días'}</b></td><td>${c.telefono?`<a class="small" href="https://wa.me/${String(c.telefono).replace(/\D/g,'')}" target="_blank" rel="noopener">WhatsApp</a>`:''}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">No hay clientes para mostrar.</td></tr>'}
+
 function showModal(h){$('modal').innerHTML=h;$('modalBg').classList.remove('hidden')}function closeModal(){$('modalBg').classList.add('hidden');currentOrder=null}
 
 async function loadAnalysis(){
