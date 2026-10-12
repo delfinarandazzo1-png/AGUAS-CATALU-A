@@ -312,7 +312,15 @@ async function deleteOrder(id){
 async function openEditOrderDate(id){return openEditOrder(id)}
 async function saveOrderDate(id){return saveEditedOrder(id)}
 async function openDelivery(id){
- currentOrder=orders.find(x=>x.id===id);const o=currentOrder,total=(Number(o.cantidad_20l)||0)*(Number(o.precio_unitario_20l)||0)+(Number(o.cantidad_12l)||0)*(Number(o.precio_unitario_12l)||0);
+ // Buscar primero en memoria; si se abre desde Reparto y el pedido no está cargado, traerlo de Supabase.
+ currentOrder=orders.find(x=>String(x.id)===String(id));
+ if(!currentOrder){
+   const {data:found,error:findError}=await sb.from('pedidos').select('*,clientes(nombre,apellido,direccion,telefono)').eq('id',id).maybeSingle();
+   if(findError){alert('No se pudo abrir el pedido: '+findError.message);return;}
+   if(!found){alert('No se encontró ese pedido. Actualizá la pantalla e intentá nuevamente.');return;}
+   currentOrder=found;
+ }
+ const o=currentOrder,total=(Number(o.cantidad_20l)||0)*(Number(o.precio_unitario_20l)||0)+(Number(o.cantidad_12l)||0)*(Number(o.precio_unitario_12l)||0);
  let prior=0;const {data}=await sb.from('v_clientes_saldo').select('saldo_actual').eq('id',o.cliente_id).maybeSingle();prior=Number(data?.saldo_actual)||0;
  showModal(`<h2>🚚 Registrar entrega</h2><p><b>${esc(clientName(o.clientes))}</b><br><span class="muted">${esc(o.clientes?.direccion||'Sin dirección')}</span></p><div class="status">Pedido: <b>${o.cantidad_20l||0}×20L · ${o.cantidad_12l||0}×12L</b><br>Total: <b>${money(total)}</b>${prior?`<br>🔴 Deuda anterior: <b>${money(prior)}</b>`:''}<br><span class="muted">Los vacíos de 20 L y 12 L se controlan por separado. Si elegís <b>🔴 Debe</b>, la entrega queda sin cobro y el importe pasa a la cuenta corriente.</span></div>
  <div class="formgrid" style="margin-top:14px"><div class="field"><label>Vacíos 20 L recibidos</label><input id="d20" type="number" min="0" value="0"></div><div class="field"><label>Vacíos 12 L recibidos</label><input id="d12" type="number" min="0" value="0"></div><div class="field"><label>Fecha real de entrega</label><input id="dDate" type="date" value="${today()}"></div><div class="field"><label>Importe cobrado ahora</label><input id="dPaid" type="number" min="0" step=".01" value="${total}"></div><div class="field"><label>Medio de pago</label><select id="dMethod" onchange="toggleDebe()"><option>Efectivo</option><option>Transferencia</option><option>Mercado Pago</option><option>Otro</option><option value="Debe">🔴 Debe</option></select></div><div class="field full"><label>Observaciones</label><textarea id="dObs"></textarea></div></div>
