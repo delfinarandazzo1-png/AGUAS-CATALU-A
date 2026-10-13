@@ -101,7 +101,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
    <div class="kpi"><div class="muted">Pendiente de cobro del mes</div><div class="n red" id="ePending">$0</div></div>
   </div>
   <div class="card"><div class="row"><div><h2 style="margin:0">📋 Clientes con dispenser eléctrico</h2><div class="muted">Las cantidades y los importes se calculan con pedidos entregados durante el mes seleccionado.</div></div></div>
-   <div style="overflow:auto;margin-top:12px"><table><thead><tr><th>Cliente</th><th>Teléfono</th><th>20 L</th><th>12 L</th><th>Total bidones</th><th>Facturado</th><th>Pagado</th><th>Estado de pago</th><th></th></tr></thead><tbody id="electricBody"></tbody></table></div>
+   <div style="overflow:auto;margin-top:12px"><table><thead><tr><th>Cliente</th><th>Teléfono</th><th>Últ. vez que se le entregó</th><th>20 L</th><th>12 L</th><th>Total bidones</th><th>Facturado</th><th>Pagado</th><th>Estado de pago</th><th></th></tr></thead><tbody id="electricBody"></tbody></table></div>
    <div class="muted" style="margin-top:10px">El pago se calcula usando el importe cobrado en la entrega o los pagos asociados a esa entrega. Los pagos de deudas antiguas no se asignan automáticamente a un mes.</div>
   </div>
  </section>
@@ -488,18 +488,20 @@ async function loadElectricDispensers(){
  const start=`${month}-01`;
  const endDate=new Date(yy,mm,1);
  const endStr=`${endDate.getFullYear()}-${String(endDate.getMonth()+1).padStart(2,'0')}-01`;
- const [mr,orr,dr,pr]=await Promise.all([
+ const [mr,orr,dr,pr,lr]=await Promise.all([
   sb.from('dispenser_electricos').select('id,cliente_id,fecha_alta,observaciones,activo,clientes(id,nombre,apellido,telefono,direccion)').eq('activo',true).order('fecha_alta',{ascending:true}),
   sb.from('pedidos').select('id,cliente_id,fecha_entrega,cantidad_20l,cantidad_12l,precio_unitario_20l,precio_unitario_12l,estado').eq('estado','Entregado').gte('fecha_entrega',start).lt('fecha_entrega',endStr),
   sb.from('entregas').select('id,pedido_id,cliente_id,importe_pedido,importe_cobrado'),
-  sb.from('pagos').select('id,entrega_id,cliente_id,importe,fecha_hora')
+  sb.from('pagos').select('id,entrega_id,cliente_id,importe,fecha_hora'),
+  sb.from('pedidos').select('cliente_id,fecha_entrega').eq('estado','Entregado').not('fecha_entrega','is',null).order('fecha_entrega',{ascending:false})
  ]);
- const err=mr.error||orr.error||dr.error||pr.error;
+ const err=mr.error||orr.error||dr.error||pr.error||lr.error;
  if(err){
   $('electricBody').innerHTML=`<tr><td colspan="9" class="empty">No se pudo cargar la lista: ${esc(err.message)}. Si indica que no existe dispenser_electricos, primero ejecutá el SQL de instalación.</td></tr>`;
   ['eCount','eBottles'].forEach(id=>$(id).textContent='—');$('eBilled').textContent='—';$('ePending').textContent='—';return;
  }
- const members=mr.data||[], ordersInMonth=orr.data||[], deliveries=dr.data||[], payments=pr.data||[];
+ const members=mr.data||[], ordersInMonth=orr.data||[], deliveries=dr.data||[], payments=pr.data||[], lastDeliveries=lr.data||[];
+ const lastDeliveryByClient={};lastDeliveries.forEach(p=>{if(p.cliente_id&&!lastDeliveryByClient[p.cliente_id]&&p.fecha_entrega)lastDeliveryByClient[p.cliente_id]=String(p.fecha_entrega).slice(0,10)});
  const deliveryByOrder={};deliveries.forEach(d=>{if(d.pedido_id)deliveryByOrder[d.pedido_id]=d});
  const paymentsByDelivery={};payments.forEach(pay=>{if(pay.entrega_id)paymentsByDelivery[pay.entrega_id]=(paymentsByDelivery[pay.entrega_id]||0)+Number(pay.importe||0)});
  const monthly={};
@@ -514,7 +516,7 @@ async function loadElectricDispensers(){
  });
  electricRows=members.map(m=>{
   const c=m.clientes||{};const a=monthly[m.cliente_id]||{n20:0,n12:0,billed:0,paid:0,pending:0,orders:0};
-  return {...m,cliente:c,n20:a.n20,n12:a.n12,total:a.n20+a.n12,billed:a.billed,paid:a.paid,pending:a.pending,orders:a.orders};
+  return {...m,cliente:c,lastDelivery:lastDeliveryByClient[m.cliente_id]||null,n20:a.n20,n12:a.n12,total:a.n20+a.n12,billed:a.billed,paid:a.paid,pending:a.pending,orders:a.orders};
  });
  $('eCount').textContent=electricRows.length;
  $('eBottles').textContent=electricRows.reduce((s,r)=>s+r.total,0);
@@ -530,8 +532,8 @@ function renderElectricDispensers(){
   const name=[c.nombre,c.apellido].filter(Boolean).join(' ');
   let status=r.orders===0?'<span class="badge">Sin compras este mes</span>':r.pending<=0?'<span class="badge green">Pagado</span>':r.paid>0?'<span class="badge orange">Pago parcial</span>':'<span class="badge red">Pendiente</span>';
   if(r.pending>0)status+=`<br><span class="muted">Debe ${money(r.pending)}</span>`;
-  return `<tr><td><b>${esc(name)}</b><br><span class="muted">${esc(c.direccion||'')}</span></td><td>${esc(c.telefono||'—')}</td><td>${r.n20}</td><td>${r.n12}</td><td><b>${r.total}</b></td><td>${money(r.billed)}</td><td>${money(r.paid)}</td><td>${status}</td><td><button class="danger small" onclick="removeElectricDispenser('${r.id}','${esc(name).replace(/'/g,'&#039;')}')">Quitar</button></td></tr>`;
- }).join('')||'<tr><td colspan="9" class="empty">No hay clientes en esta lista. Tocá “Agregar cliente” para empezar.</td></tr>';
+  return `<tr><td><b>${esc(name)}</b><br><span class="muted">${esc(c.direccion||'')}</span></td><td>${esc(c.telefono||'—')}</td><td>${r.lastDelivery?formatDate(r.lastDelivery):'Sin entregas registradas'}</td><td>${r.n20}</td><td>${r.n12}</td><td><b>${r.total}</b></td><td>${money(r.billed)}</td><td>${money(r.paid)}</td><td>${status}</td><td><button class="danger small" onclick="removeElectricDispenser('${r.id}','${esc(name).replace(/'/g,'&#039;')}')">Quitar</button></td></tr>`;
+ }).join('')||'<tr><td colspan="10" class="empty">No hay clientes en esta lista. Tocá “Agregar cliente” para empezar.</td></tr>';
 }
 async function openElectricDispenser(){
  const {data:cs,error}=await sb.from('clientes').select('id,nombre,apellido,telefono').eq('activo',true).order('nombre');
