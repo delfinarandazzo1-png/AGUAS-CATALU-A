@@ -386,9 +386,20 @@ async function loadHome(){
 }
 async function calculateClientBalance(id,client){const [{data:orders,error:oe},{data:payments,error:pe}]=await Promise.all([sb.from('pedidos').select('cantidad_20l,cantidad_12l,precio_unitario_20l,precio_unitario_12l,estado').eq('cliente_id',id).eq('estado','Entregado'),sb.from('pagos').select('importe').eq('cliente_id',id)]);if(oe||pe)throw (oe||pe);const sales=(orders||[]).reduce((sum,o)=>sum+(Number(o.cantidad_20l)||0)*(Number(o.precio_unitario_20l)||0)+(Number(o.cantidad_12l)||0)*(Number(o.precio_unitario_12l)||0),0);const paid=(payments||[]).reduce((sum,p)=>sum+Number(p.importe||0),0);return Math.max(0,(Number(client?.deuda_inicial)||0)+sales-paid)}
 async function loadAccounts(){
- const {data:cs,error}=await sb.from('clientes').select('*').eq('activo',true).order('nombre');if(error)return $('accountBody').innerHTML='<tr><td colspan="3">❌ '+esc(error.message)+'</td></tr>';
- const rows=[];try{for(const c of cs||[]){const balance=await calculateClientBalance(c.id,c);if(balance>0)rows.push({...c,saldo_actual:balance})}}catch(e){return $('accountBody').innerHTML='<tr><td colspan="3">❌ No se pudo calcular la deuda: '+esc(e.message||'Error')+'</td></tr>'}
- rows.sort((a,b)=>b.saldo_actual-a.saldo_actual);$('accountBody').innerHTML=rows.map(x=>`<tr><td><button class="small secondary" onclick="openAccountDetail('${x.id}')">👤 ${esc(clientName(x))}</button></td><td class="red"><b>${money(x.saldo_actual)}</b></td><td><button class="small secondary" onclick="openPayment('${x.id}','${esc(clientName(x)).replace(/'/g,'')}')">＋ Registrar pago</button></td></tr>`).join('')||'<tr><td colspan="3" class="empty">🎉 No hay deudas pendientes.</td></tr>';
+ const body=$('accountBody');
+ body.innerHTML='<tr><td colspan="3" class="muted">Cargando cuentas corrientes…</td></tr>';
+ try{
+   // Consultar la vista de saldo ya corregida en Supabase en una sola petición.
+   const {data,error}=await sb.from('v_clientes_saldo')
+     .select('id,nombre,apellido,telefono,direccion,activo,saldo_actual')
+     .eq('activo',true)
+     .order('saldo_actual',{ascending:false});
+   if(error) throw error;
+   const rows=(data||[]).filter(x=>Number(x.saldo_actual)>0);
+   body.innerHTML=rows.map(x=>`<tr><td><button class="small secondary" onclick="openAccountDetail('${x.id}')">👤 ${esc(clientName(x))}</button></td><td class="red"><b>${money(x.saldo_actual)}</b></td><td><button class="small secondary" onclick="openPayment('${x.id}','${esc(clientName(x)).replace(/'/g,'')}')">＋ Registrar pago</button></td></tr>`).join('')||'<tr><td colspan="3" class="empty">🎉 No hay deudas pendientes.</td></tr>';
+ }catch(e){
+   body.innerHTML='<tr><td colspan="3">❌ No se pudieron cargar las cuentas. <button class="small secondary" onclick="loadAccounts()">Reintentar</button><div class="muted">'+esc(e?.message||'Error de conexión')+'</div></td></tr>';
+ }
 }
 
 async function openAccountDetail(id){
