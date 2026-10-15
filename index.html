@@ -380,8 +380,9 @@ async function loadHome(){
    const {data:deliveryRows}=await sb.from('entregas').select('importe_pedido,pedido_id').in('pedido_id',ids);
    sales=deliveryRows||[];
  }
- const {data:debt}=await sb.from('v_clientes_saldo').select('saldo_actual');
- $('kClients').textContent=clients.length;$('kPending').textContent=(po||[]).length;$('kSales').textContent=money(sales.reduce((a,x)=>a+Number(x.importe_pedido||0),0));$('kDebt').textContent=money((debt||[]).reduce((a,x)=>a+Math.max(0,Number(x.saldo_actual)||0),0));
+ const {data:debt,error:debtError}=await sb.from('v_clientes_saldo').select('id,activo,saldo_actual').eq('activo',true);
+ const totalDebt=debtError?null:(debt||[]).filter(x=>Number(x.saldo_actual)>0).reduce((sum,x)=>sum+Number(x.saldo_actual||0),0);
+ $('kClients').textContent=clients.length;$('kPending').textContent=(po||[]).length;$('kSales').textContent=money(sales.reduce((a,x)=>a+Number(x.importe_pedido||0),0));$('kDebt').textContent=totalDebt===null?'—':money(totalDebt);
  $('homeStops').innerHTML=(po||[]).slice(0,6).map(o=>`<div style="padding:10px 0;border-bottom:1px solid var(--line)"><b>${esc(clientName(o.clientes))}</b> · ${o.cantidad_20l||0}×20L ${o.cantidad_12l||0}×12L <span class="muted">· ${esc(o.clientes?.direccion||'Sin dirección')}</span></div>`).join('')||'<div class="empty">No hay pedidos pendientes para hoy.</div>';
 }
 async function calculateClientBalance(id,client){const [{data:orders,error:oe},{data:payments,error:pe}]=await Promise.all([sb.from('pedidos').select('cantidad_20l,cantidad_12l,precio_unitario_20l,precio_unitario_12l,estado').eq('cliente_id',id).eq('estado','Entregado'),sb.from('pagos').select('importe').eq('cliente_id',id)]);if(oe||pe)throw (oe||pe);const sales=(orders||[]).reduce((sum,o)=>sum+(Number(o.cantidad_20l)||0)*(Number(o.precio_unitario_20l)||0)+(Number(o.cantidad_12l)||0)*(Number(o.precio_unitario_12l)||0),0);const paid=(payments||[]).reduce((sum,p)=>sum+Number(p.importe||0),0);return Math.max(0,(Number(client?.deuda_inicial)||0)+sales-paid)}
